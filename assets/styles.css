@@ -1,0 +1,108 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+
+* {
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+  font-family: 'Inter';
+}
+
+body {
+  padding: 2rem;
+}
+
+.Select {
+  min-width: 12rem;
+}
+
+.dash-input {
+  padding: 0.5rem;
+}
+
+#_dash-app-content #main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+}
+
+#input-wrapper,
+#arima-input-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+#metrics-output {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+}
+
+#metrics-item {
+  background-color: white;
+  padding: 1rem;
+  border: 0.0625rem solid #ccc;
+  border-radius: 0.25rem;
+}
+
+#metrics-item h3 {
+  font-weight: 500;
+}
+
+#metrics-item hr {
+  height: 1px;
+  margin: 0.5rem 0;
+  border: none;
+  border-bottom: 0.0625rem solid #ccc;
+}
+
+#metrics-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+#metrics-list li {
+  padding: 0.5rem 0;
+}
+
+#arima-params-wrapper {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  justify-content: center;
+}
+
+#arima-params-wrapper > div {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+#arima-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 32rem;
+}
+
+#arima-input-wrapper .Select {
+  min-width: 20rem;
+}
+
+#random-forest-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+#rf-params-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
