@@ -8,6 +8,7 @@ import statsmodels.api as sm
 from statsmodels.tsa.arima.model import ARIMA
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
+from itertools import product
 
 file_path = "./dataSet.xlsx"
 df = pd.read_excel(file_path)
@@ -206,6 +207,12 @@ def plot_arima_forecast(country, selected_column, p, d, q):
     forecast = [data.iloc[-1]] + list(forecast)
     forecast_years = [years.iloc[-1]] + list(forecast_years)
 
+    residuals = model_fit.resid
+    std_error = np.std(residuals)
+
+    conf_interval_upper = forecast + 1.96 * std_error
+    conf_interval_lower = forecast - 1.96 * std_error
+
     fig = go.Figure()
 
     fig.add_trace(
@@ -227,8 +234,30 @@ def plot_arima_forecast(country, selected_column, p, d, q):
         )
     )
 
+    fig.add_trace(
+        go.Scatter(
+            x=forecast_years,
+            y=conf_interval_upper,
+            mode="none",
+            fill="tonexty",
+            fillcolor="rgba(255, 0, 0, 0.2)",
+            showlegend=False,
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=forecast_years,
+            y=conf_interval_lower,
+            mode="none",
+            fill="tonexty",
+            fillcolor="rgba(255, 0, 0, 0.2)",
+            showlegend=False,
+        )
+    )
+
     fig.update_layout(
-        title=f"Прогноз для {country} (AIC: {aic_value:.2f})",
+        title=f"Прогноз для {country} (AIC: {aic_value:.2f}, p: {p}, d: {d}, q: {q})",
         xaxis_title="Рік",
         yaxis_title="Значення",
     )
