@@ -1,14 +1,14 @@
 import dash
 from dash import dcc, html
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
-import statsmodels.api as sm
+from itertools import product
 from statsmodels.tsa.arima.model import ARIMA
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
-from itertools import product
+import datetime
 
 file_path = "./dataSet.xlsx"
 df = pd.read_excel(file_path)
@@ -181,6 +181,36 @@ def plot_gas_exports(country):
     return fig
 
 
+def find_best_arima_order(
+    country, selected_column, p_range=(0, 3), d_range=(0, 2), q_range=(0, 3)
+):
+    filtered_df = df[
+        (df["cty_name"] == country)
+        & (df["year"] >= start_year)
+        & (df["year"] <= end_year)
+    ].dropna(subset=[selected_column])
+
+    data = filtered_df[selected_column]
+
+    best_aic = float("inf")
+    best_order = None
+    for p, d, q in product(
+        range(p_range[0], p_range[1] + 1),
+        range(d_range[0], d_range[1] + 1),
+        range(q_range[0], q_range[1] + 1),
+    ):
+        try:
+            model = ARIMA(data, order=(p, d, q))
+            model_fit = model.fit()
+            aic = model_fit.aic
+            if aic < best_aic:
+                best_aic = aic
+                best_order = (p, d, q)
+        except Exception as e:
+            continue
+    return best_order, best_aic
+
+
 def plot_arima_forecast(country, selected_column, p, d, q):
     if not country or not selected_column:
         return go.Figure()
@@ -257,7 +287,7 @@ def plot_arima_forecast(country, selected_column, p, d, q):
     )
 
     fig.update_layout(
-        title=f"Прогноз для {country} (AIC: {aic_value:.2f}, p: {p}, d: {d}, q: {q})",
+        title=f"Прогноз для {country} (AIC: {aic_value:.2f})",
         xaxis_title="Рік",
         yaxis_title="Значення",
     )
@@ -374,6 +404,10 @@ app.layout = html.Div(
                 ),
             ],
         ),
+        html.Button(
+            "Знайти найкращі параметри для ARIMA", id="search-arima", n_clicks=0
+        ),
+        html.Div(id="arima-search-output"),
         dcc.Graph(id="arima-graph-output", style={"width": "100%"}),
         html.H2("Прогноз за допомогою Random Forest"),
         html.Div(
@@ -501,6 +535,27 @@ def update_graph(countries, selected_graph):
 
 
 @app.callback(
+    Output("arima-search-output", "children"),
+    Input("search-arima", "n_clicks"),
+    Input("arima-country-dropdown", "value"),
+    Input("arima-graph-dropdown", "value"),
+)
+def search_best_aic_arima(n_clicks, country, selected_column):
+    if not country or not selected_column:
+        return "Будь ласка, оберіть країну та категорію."
+
+    best_order, best_aic = find_best_arima_order(country, selected_column)
+
+    if not best_order:
+        return "Не вдалося знайти найкращі параметри для ARIMA."
+
+    p, d, q = best_order
+    print(p, d, q, best_aic)
+    search_output = f"Найкращі параметри: p={p}, d={d}, q={q} з AIC={best_aic:.2f}"
+    return search_output
+
+
+@app.callback(
     Output("arima-graph-output", "figure"),
     [
         Input("arima-country-dropdown", "value"),
@@ -512,6 +567,56 @@ def update_graph(countries, selected_graph):
 )
 def update_arima_graph(country, selected_column, p, d, q):
     return plot_arima_forecast(country, selected_column, p, d, q)
+
+
+@app.callback(
+    Output("arima-save-output", "children"),
+    Input("save-arima", "n_clicks"),
+    [
+        State("arima-country-dropdown", "value"),
+        State("arima-graph-dropdown", "value"),
+        State("arima-p-input", "value"),
+        State("arima-d-input", "value"),
+        State("arima-q-input", "value"),
+    ],
+)
+def save_arima_forecast(n_clicks, country, selected_column, p, d, q):
+    if not n_clicks or not country or not selected_column:
+        return "Будь ласка, оберіть країну та категорію для збереження прогнозу."
+
+    fig = plot_arima_forecast(country, selected_column, p, d, q)
+
+    historical_data = fig.data[0]
+    forecast_data = fig.data[1]
+    historical_years = pd.to_datetime(historical_data["x"]).year
+    forecast_years = pd.to_datetime(forecast_data["x"]).year
+
+    historical_df = pd.DataFrame(
+        {
+            "year": historical_years,
+            "value": historical_data["y"],
+        }
+    )
+
+    forecast_df = pd.DataFrame(
+        {
+            "year": forecast_years,
+            "forecast": forecast_data["y"],
+        }
+    )
+    combined_df = pd.concat([historical_df, forecast_df], ignore_index=True)
+
+    filename = f"{country}_{selected_column}_ARIMA_forecast_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+
+    combined_df.to_csv(filename, index=False)
+
+    return f"Прогноз збережено у файл: {filename}"
+
+
+app.layout.children.append(
+    html.Button("Save ARIMA Forecast", id="save-arima", n_clicks=0)
+)
+app.layout.children.append(html.Div(id="arima-save-output"))
 
 
 @app.callback(
